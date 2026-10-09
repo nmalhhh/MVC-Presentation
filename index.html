@@ -1,0 +1,2358 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Group 5 · Kiến trúc Model-View-Controller (MVC)</title>
+  <meta name="description" content="Thuyết trình kiến trúc Model-View-Controller (MVC) - Software Architecture & Design">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================================
+       CSS VARIABLES & THEMES
+       ========================================================================== */
+    :root {
+      --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', Consolas, Monaco, monospace;
+
+      --transition-fast: 0.15s ease;
+      --transition-normal: 0.25s ease;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+    }
+
+    [data-theme="dark"] {
+      --bg-canvas: #080c14;
+      --bg-surface: #0f172a;
+      --bg-surface-elevated: #1e293b;
+      --bg-glass: rgba(15, 23, 42, 0.85);
+
+      --border-subtle: #1e293b;
+      --border-strong: #334155;
+
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+
+      --accent-cyan: #06b6d4;
+      --accent-cyan-glow: rgba(6, 182, 212, 0.22);
+      --accent-orange: #f97316;
+      --accent-orange-glow: rgba(249, 115, 22, 0.22);
+      --accent-emerald: #10b981;
+      --accent-rose: #f43f5e;
+      --accent-purple: #8b5cf6;
+
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --svg-node-bg: #1e293b;
+      --svg-node-border: #334155;
+    }
+
+    [data-theme="light"] {
+      --bg-canvas: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-surface-elevated: #f1f5f9;
+      --bg-glass: rgba(255, 255, 255, 0.9);
+
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
+
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+
+      --accent-cyan: #0284c7;
+      --accent-cyan-glow: rgba(2, 132, 199, 0.18);
+      --accent-orange: #ea580c;
+      --accent-orange-glow: rgba(234, 88, 12, 0.18);
+      --accent-emerald: #059669;
+      --accent-rose: #e11d48;
+      --accent-purple: #7c3aed;
+
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --svg-node-bg: #f8fafc;
+      --svg-node-border: #cbd5e1;
+    }
+
+    /* ==========================================================================
+       RESET & BASE
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--font-sans);
+      background-color: var(--bg-canvas);
+      color: var(--text-primary);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    /* Ambient background grid */
+    .ambient-grid {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-size: 40px 40px;
+      background-image:
+        linear-gradient(to right, var(--border-subtle) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--border-subtle) 1px, transparent 1px);
+      opacity: 0.35;
+      z-index: 0;
+    }
+
+    /* ==========================================================================
+       TOP PROGRESS BAR & HEADER
+       ========================================================================== */
+    #progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--border-subtle);
+      z-index: 100;
+    }
+
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-cyan), var(--accent-orange));
+      transition: width var(--transition-normal);
+      box-shadow: 0 0 10px var(--accent-cyan);
+    }
+
+    .top-bar {
+      position: fixed;
+      top: 4px;
+      left: 0;
+      right: 0;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      z-index: 90;
+    }
+
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .badge-pill {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--accent-cyan-glow);
+      color: var(--accent-cyan);
+      border: 1px solid var(--accent-cyan);
+    }
+
+    .topic-tag {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .icon-btn:hover {
+      background: var(--bg-surface-elevated);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* ==========================================================================
+       BOTTOM BAR & NAVIGATION
+       ========================================================================== */
+    .bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-subtle);
+      z-index: 90;
+      font-size: 0.85rem;
+    }
+
+    .slide-counter {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .slide-counter .current {
+      color: var(--accent-cyan);
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-btn {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all var(--transition-fast);
+    }
+
+    .nav-btn:hover:not(:disabled) {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .shortcut-hints {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+
+    .key-badge {
+      font-family: var(--font-mono);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-strong);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+    }
+
+    /* ==========================================================================
+       DECK & SLIDES
+       ========================================================================== */
+    #deck {
+      position: absolute;
+      top: 56px;
+      bottom: 50px;
+      left: 0;
+      right: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      z-index: 10;
+    }
+
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1280px;
+      min-height: calc(100vh - 146px);
+      margin: auto;
+      padding: 32px 36px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-xl);
+      backdrop-filter: blur(16px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      animation: fadeInSlide 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .slide.active {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    @keyframes fadeInSlide {
+      from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.995);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Slide Typography */
+    .slide-header {
+      margin-bottom: 20px;
+    }
+
+    .slide-category {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-orange);
+      margin-bottom: 4px;
+    }
+
+    .slide-title {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .slide-subtitle {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      max-width: 900px;
+    }
+
+    /* Grids & Cards */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .grid-5 {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      transition: all var(--transition-normal);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+    }
+
+    .card.accent-cyan { border-left: 4px solid var(--accent-cyan); }
+    .card.accent-orange { border-left: 4px solid var(--accent-orange); }
+    .card.accent-purple { border-left: 4px solid var(--accent-purple); }
+    .card.accent-rose { border-left: 4px solid var(--accent-rose); }
+    .card.accent-emerald { border-left: 4px solid var(--accent-emerald); }
+
+    .card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-desc {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .tag-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .tag-badge.cyan { background: var(--accent-cyan-glow); color: var(--accent-cyan); }
+    .tag-badge.orange { background: var(--accent-orange-glow); color: var(--accent-orange); }
+    .tag-badge.emerald { background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); }
+    .tag-badge.rose { background: rgba(244, 63, 94, 0.2); color: var(--accent-rose); }
+    .tag-badge.purple { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); }
+
+    /* SVG Containers */
+    .svg-wrapper {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .svg-wrapper svg {
+      width: 100%;
+      height: auto;
+      max-height: 420px;
+      overflow: visible;
+    }
+
+    .svg-interactive {
+      transition: transform 0.2s ease, filter 0.2s ease;
+      cursor: pointer;
+    }
+
+    .svg-interactive:hover {
+      filter: drop-shadow(0 0 8px var(--accent-cyan));
+    }
+
+    /* ==========================================================================
+       SVG KEYFRAME ANIMATIONS (CSS PURE)
+       ========================================================================== */
+    /* 1. Spaghetti Wire Chaos */
+    @keyframes chaosPulse {
+      0%, 100% { stroke: #f43f5e; opacity: 0.85; stroke-dashoffset: 0; }
+      50% { stroke: #fb7185; opacity: 0.35; stroke-dashoffset: 24; }
+    }
+    .spaghetti-wire {
+      stroke-dasharray: 6 4;
+      animation: chaosPulse 1.8s ease-in-out infinite;
+    }
+
+    /* 2. Linear Flow Dashes */
+    @keyframes flowDashFwd {
+      from { stroke-dashoffset: 28; }
+      to { stroke-dashoffset: 0; }
+    }
+    .flow-dash-cyan {
+      stroke-dasharray: 8 6;
+      animation: flowDashFwd 1.4s linear infinite;
+    }
+    .flow-dash-orange {
+      stroke-dasharray: 8 6;
+      animation: flowDashFwd 1.4s linear infinite;
+    }
+    .flow-dash-emerald {
+      stroke-dasharray: 8 6;
+      animation: flowDashFwd 1.4s linear infinite;
+    }
+
+    /* 3. Gear Rotation */
+    @keyframes spinCW {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes spinCCW {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+    .gear-spin {
+      transform-origin: center;
+      animation: spinCW 14s linear infinite;
+    }
+    .gear-spin-rev {
+      transform-origin: center;
+      animation: spinCCW 10s linear infinite;
+    }
+
+    /* 4. Skeleton Shimmer & Data Binding */
+    @keyframes shimmerPulse {
+      0%, 100% { opacity: 0.25; fill: var(--border-strong); }
+      50% { opacity: 0.85; fill: var(--accent-cyan); }
+    }
+    .skeleton-shimmer {
+      animation: shimmerPulse 2s ease-in-out infinite;
+    }
+
+    /* 5. Beacon Router Pulse */
+    @keyframes routerBeacon {
+      0% { r: 6; opacity: 1; }
+      100% { r: 24; opacity: 0; }
+    }
+    .beacon-pulse {
+      animation: routerBeacon 1.8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+    }
+
+    /* 6. Pipeline Scanner */
+    @keyframes scannerMove {
+      0% { transform: translateX(0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateX(780px); opacity: 0; }
+    }
+    .scanner-beam {
+      animation: scannerMove 3.2s ease-in-out infinite;
+    }
+
+    /* 7. Teeter Scale Tilt */
+    @keyframes scaleTilt {
+      0%, 100% { transform: rotate(11deg); }
+      50% { transform: rotate(14deg); }
+    }
+    .scale-beam-tilted {
+      transform-origin: 300px 140px;
+      animation: scaleTilt 2.8s ease-in-out infinite;
+    }
+
+    /* 8. MVVM Sync Wave */
+    @keyframes syncFlow {
+      from { stroke-dashoffset: 0; }
+      to { stroke-dashoffset: -24; }
+    }
+    .sync-wave {
+      stroke-dasharray: 6 6;
+      animation: syncFlow 1.2s linear infinite;
+    }
+
+    /* ==========================================================================
+       HERO & SPECIAL LAYOUTS
+       ========================================================================== */
+    .hero-container {
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 16px 0;
+    }
+
+    .hero-meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--accent-cyan);
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-size: 3.4rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, var(--text-primary) 40%, var(--accent-cyan) 80%, var(--accent-orange) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      text-align: left;
+      margin-top: 28px;
+    }
+
+    /* Comparison Table */
+    .table-container {
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+    }
+
+    table.comp-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+
+    table.comp-table th,
+    table.comp-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    table.comp-table th {
+      background: var(--bg-surface-elevated);
+      font-weight: 700;
+      color: var(--text-primary);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    table.comp-table tr:last-child td { border-bottom: none; }
+
+    /* Modals */
+    #grid-overlay, #help-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(8, 12, 20, 0.95);
+      backdrop-filter: blur(16px);
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      padding: 30px;
+      overflow-y: auto;
+    }
+
+    #grid-overlay.active, #help-modal.active { display: flex; }
+
+    .grid-header, .help-card h3 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-strong);
+    }
+
+    .grid-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.8rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .grid-thumbnails {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .grid-thumb {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .grid-thumb:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px var(--accent-cyan-glow);
+    }
+
+    .grid-thumb.active {
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 16px var(--accent-orange-glow);
+    }
+
+    .thumb-num {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      margin-bottom: 4px;
+    }
+
+    .thumb-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .help-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-xl);
+      padding: 32px;
+      max-width: 540px;
+      width: 100%;
+      margin: auto;
+    }
+
+    .help-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .help-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.88rem;
+    }
+
+    @media (max-width: 900px) {
+      .slide { padding: 20px; }
+      .slide-title { font-size: 1.6rem; }
+      .grid-2, .grid-3, .grid-4, .grid-5 { grid-template-columns: 1fr; }
+      .hero-title { font-size: 2.2rem; }
+      .shortcut-hints, .topic-tag { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-grid"></div>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-container">
+    <div id="progress-bar"></div>
+  </div>
+
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="brand-badge">
+      <span class="badge-pill">ARCH-5</span>
+      <span>Group 5 · Architecture Presentation</span>
+      <span class="topic-tag">/ Model-View-Controller (MVC)</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="btn-theme" title="Đổi theme sáng/tối (T)">
+        <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-grid" title="Tổng quan Slide (G)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-fullscreen" title="Toàn màn hình (F)">
+        <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-help" title="Phím tắt trợ giúp (?)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Deck of Slides -->
+  <main id="deck">
+
+    <!-- ==========================================
+         SLIDE 1: BÌA (TỐI GIẢN, TRANG TRỌNG)
+         ========================================== -->
+    <section class="slide active" id="slide-1" data-title="Bìa: Kiến trúc MVC">
+      <div class="hero-container">
+        <div class="hero-meta">
+          <span>Software Architecture & Design</span>
+          <span>•</span>
+          <span>Architectural Pattern</span>
+        </div>
+        <h1 class="hero-title">Kiến trúc Model-View-Controller (MVC)</h1>
+
+        <div class="hero-info-grid">
+          <div class="card accent-cyan">
+            <div class="card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-cyan)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Giảng viên hướng dẫn
+            </div>
+            <p style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-top: 6px;">Nguyễn Mạnh Cường</p>
+          </div>
+          <div class="card accent-orange">
+            <div class="card-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent-orange)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Nhóm thực hiện
+            </div>
+            <p style="font-size: 1.2rem; font-weight: 700; color: var(--text-primary); margin-top: 6px;">Group 5</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 2: THÀNH VIÊN NHÓM
+         ========================================== -->
+    <section class="slide" id="slide-2" data-title="Thành viên nhóm">
+      <div class="slide-header">
+        <span class="slide-category">Nhân sự</span>
+        <h2 class="slide-title">Danh sách thành viên Group 5</h2>
+      </div>
+
+      <div class="grid-5" style="margin-bottom: 24px;">
+        <div class="card accent-cyan" style="text-align: center; padding: 28px 14px;">
+          <div style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 10px;">01</div>
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Nguyễn Đức Mạnh</h3>
+        </div>
+
+        <div class="card accent-orange" style="text-align: center; padding: 28px 14px;">
+          <div style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--accent-orange); margin-bottom: 10px;">02</div>
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Nguyễn Đức Thủy</h3>
+        </div>
+
+        <div class="card accent-cyan" style="text-align: center; padding: 28px 14px;">
+          <div style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 10px;">03</div>
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Nguyễn Tiến Dũng</h3>
+        </div>
+
+        <div class="card accent-orange" style="text-align: center; padding: 28px 14px;">
+          <div style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--accent-orange); margin-bottom: 10px;">04</div>
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Nguyễn Văn Thành</h3>
+        </div>
+
+        <div class="card accent-cyan" style="text-align: center; padding: 28px 14px;">
+          <div style="font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 10px;">05</div>
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">Đỗ Việt Tiến</h3>
+        </div>
+      </div>
+
+      <div class="card" style="background: var(--bg-surface-elevated); padding: 18px 24px; border-left: 4px solid var(--accent-cyan);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: var(--accent-emerald);"></div>
+            <span style="font-size: 1rem; font-weight: 600;">Giảng viên hướng dẫn:</span>
+            <span style="color: var(--accent-cyan); font-weight: 700; font-size: 1.1rem;">Nguyễn Mạnh Cường</span>
+          </div>
+          <span style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-muted);">Software Architecture & Design</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 3: AGENDA
+         ========================================== -->
+    <section class="slide" id="slide-3" data-title="Nội dung báo cáo">
+      <div class="slide-header">
+        <span class="slide-category">Lộ trình bài thuyết trình</span>
+        <h2 class="slide-title">Agenda: Cấu trúc bài báo cáo</h2>
+      </div>
+
+      <div class="grid-5" style="margin-top: 10px;">
+        <div class="card accent-cyan">
+          <span class="tag-badge cyan" style="margin-bottom: 8px;">Phần 01</span>
+          <h3 class="card-title" style="font-size: 1.05rem;">Khởi nguồn & Triết lý</h3>
+          <p class="card-desc" style="font-size: 0.85rem; margin-top: 6px;">Spaghetti Code, Trygve Reenskaug 1979, nguyên lý SoC & SRP.</p>
+        </div>
+
+        <div class="card accent-orange">
+          <span class="tag-badge orange" style="margin-bottom: 8px;">Phần 02</span>
+          <h3 class="card-title" style="font-size: 1.05rem;">Tam giác M - V - C</h3>
+          <p class="card-desc" style="font-size: 0.85rem; margin-top: 6px;">Ranh giới nhiệm vụ: Model (State), View (Passive), Controller (Mediator).</p>
+        </div>
+
+        <div class="card accent-cyan">
+          <span class="tag-badge cyan" style="margin-bottom: 8px;">Phần 03</span>
+          <h3 class="card-title" style="font-size: 1.05rem;">Sơ đồ tương tác</h3>
+          <p class="card-desc" style="font-size: 0.85rem; margin-top: 6px;">Luồng dữ liệu 3 chiều, chu kỳ Request-Response, Desktop vs Web MVC.</p>
+        </div>
+
+        <div class="card accent-orange">
+          <span class="tag-badge orange" style="margin-bottom: 8px;">Phần 04</span>
+          <h3 class="card-title" style="font-size: 1.05rem;">So sánh & Enterprise</h3>
+          <p class="card-desc" style="font-size: 0.85rem; margin-top: 6px;">MVC vs MVP vs MVVM, phân tầng 3-Tier trong Spring Boot & ASP.NET.</p>
+        </div>
+
+        <div class="card accent-purple">
+          <span class="tag-badge purple" style="margin-bottom: 8px;">Phần 05</span>
+          <h3 class="card-title" style="font-size: 1.05rem;">Chất lượng & Đánh giá</h3>
+          <p class="card-desc" style="font-size: 0.85rem; margin-top: 6px;">Anti-patterns (Fat Controller), Best Practices, ISO/IEC 25010 & Kết bài.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 4: KHỞI NGUỒN & SPAGHETTI VS MVC (VISUAL 55%)
+         ========================================== -->
+    <section class="slide" id="slide-4" data-title="Khởi nguồn & Vấn đề Spaghetti Code">
+      <div class="slide-header">
+        <span class="slide-category">Phần 1: Khởi nguồn & Bối cảnh</span>
+        <h2 class="slide-title">Spaghetti Code vs Kiến trúc phân tầng MVC</h2>
+        <p class="slide-subtitle">Trygve Reenskaug (Xerox PARC 1979) phát minh MVC để giải phóng giao diện người dùng khỏi mớ hỗn độn nguyên khối.</p>
+      </div>
+
+      <div class="svg-wrapper" style="margin-bottom: 16px;">
+        <svg viewBox="0 0 960 280" xmlns="http://www.w3.org/2000/svg">
+          <!-- Left: Spaghetti Chaos -->
+          <g transform="translate(20, 20)">
+            <rect width="440" height="240" rx="12" fill="var(--svg-node-bg)" stroke="var(--accent-rose)" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <text x="220" y="32" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="700" fill="var(--accent-rose)">CHƯA ÁP DỤNG MVC (SPAGHETTI COUPLING)</text>
+
+            <!-- Chaotic Nodes -->
+            <rect x="30" y="65" width="116" height="48" rx="6" fill="#1e1e2d" stroke="var(--border-strong)"/>
+            <text x="88" y="85" text-anchor="middle" font-family="var(--font-mono)" font-size="10" font-weight="700" fill="var(--text-primary)">I/O Handling</text>
+            <text x="88" y="100" text-anchor="middle" font-size="8.5" fill="var(--text-muted)">Scanner / Print</text>
+
+            <rect x="294" y="65" width="116" height="48" rx="6" fill="#1e1e2d" stroke="var(--border-strong)"/>
+            <text x="352" y="85" text-anchor="middle" font-family="var(--font-mono)" font-size="10" font-weight="700" fill="var(--text-primary)">Business Logic</text>
+            <text x="352" y="100" text-anchor="middle" font-size="8.5" fill="var(--text-muted)">Rules &amp; Calc</text>
+
+            <rect x="160" y="165" width="120" height="48" rx="6" fill="#1e1e2d" stroke="var(--border-strong)"/>
+            <text x="220" y="185" text-anchor="middle" font-family="var(--font-mono)" font-size="10" font-weight="700" fill="var(--text-primary)">Database Access</text>
+            <text x="220" y="200" text-anchor="middle" font-size="8.5" fill="var(--text-muted)">SQL Queries</text>
+
+            <!-- Spaghetti Wires -->
+            <path d="M 88 113 Q 130 185 160 189" fill="none" stroke="var(--accent-rose)" stroke-width="2" class="spaghetti-wire"/>
+            <path d="M 146 89 Q 220 125 294 89" fill="none" stroke="var(--accent-rose)" stroke-width="2" class="spaghetti-wire"/>
+            <path d="M 352 113 Q 315 175 280 189" fill="none" stroke="var(--accent-rose)" stroke-width="2" class="spaghetti-wire"/>
+            <path d="M 88 65 Q 220 25 352 65" fill="none" stroke="var(--accent-rose)" stroke-width="1.5" class="spaghetti-wire"/>
+            <path d="M 120 113 Q 200 95 240 165" fill="none" stroke="var(--accent-rose)" stroke-width="1.5" class="spaghetti-wire"/>
+
+            <circle cx="220" cy="115" r="14" fill="var(--accent-rose)" opacity="0.2"/>
+            <text x="220" y="120" text-anchor="middle" font-size="13">⚠️</text>
+          </g>
+
+          <!-- Right: Orderly MVC -->
+          <g transform="translate(500, 20)">
+            <rect width="440" height="240" rx="12" fill="var(--svg-node-bg)" stroke="var(--accent-cyan)" stroke-width="1.5"/>
+            <text x="220" y="32" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="700" fill="var(--accent-cyan)">KIẾN TRÚC PHÂN TẦNG MVC (LOOSE COUPLING)</text>
+
+            <!-- Controller -->
+            <rect x="170" y="60" width="100" height="45" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--accent-cyan)" stroke-width="2"/>
+            <text x="220" y="87" text-anchor="middle" font-size="12" font-weight="700" fill="var(--accent-cyan)">CONTROLLER</text>
+
+            <!-- View -->
+            <rect x="50" y="160" width="100" height="45" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--accent-emerald)" stroke-width="2"/>
+            <text x="100" y="187" text-anchor="middle" font-size="12" font-weight="700" fill="var(--accent-emerald)">VIEW</text>
+
+            <!-- Model -->
+            <rect x="290" y="160" width="100" height="45" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--accent-orange)" stroke-width="2"/>
+            <text x="340" y="187" text-anchor="middle" font-size="12" font-weight="700" fill="var(--accent-orange)">MODEL</text>
+
+            <!-- Clean Bus Lines -->
+            <line x1="170" y1="85" x2="100" y2="160" stroke="var(--accent-cyan)" stroke-width="2.5" class="flow-dash-cyan"/>
+            <line x1="270" y1="85" x2="340" y2="160" stroke="var(--accent-orange)" stroke-width="2.5" class="flow-dash-orange"/>
+            <line x1="290" y1="182" x2="150" y2="182" stroke="var(--accent-emerald)" stroke-width="2.5" class="flow-dash-emerald"/>
+
+            <circle cx="220" cy="182" r="14" fill="var(--accent-emerald)" opacity="0.2"/>
+            <text x="220" y="187" text-anchor="middle" font-size="14">✓</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="grid-2">
+        <div class="card accent-rose" style="padding: 14px 18px;">
+          <h4 style="font-size: 0.95rem; color: var(--accent-rose); font-weight: 700; margin-bottom: 4px;">Ví dụ: Ứng dụng Console / Standalone truyền thống</h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
+            Gộp <code>Scanner</code>, thuật toán tính điểm và <code>System.out.println</code> vào 1 hàm → <strong>Không thể viết Unit Test tự động</strong>, đập bỏ toàn bộ mã khi chuyển sang Web GUI.
+          </p>
+        </div>
+
+        <div class="card accent-cyan" style="padding: 14px 18px;">
+          <h4 style="font-size: 0.95rem; color: var(--accent-cyan); font-weight: 700; margin-bottom: 4px;">Giải pháp MVC: Phân ranh giới rõ ràng</h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
+            <strong>Tách rời 3 mối quan tâm:</strong> Dữ liệu (Model) độc lập 100% với hiển thị (View), điều phối qua Controller → <strong>Kiểm thử độc lập, bảo trì dài hạn</strong>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 5: TRIẾT LÝ CỐT LÕI (SoC & SRP) (VISUAL 55%)
+         ========================================== -->
+    <section class="slide" id="slide-5" data-title="Triết lý cốt lõi: SoC & SRP">
+      <div class="slide-header">
+        <span class="slide-category">Phần 1: Khởi nguồn & Triết lý</span>
+        <h2 class="slide-title">Separation of Concerns (SoC) & Single Responsibility</h2>
+        <p class="slide-subtitle">Chia nhỏ phần mềm thành các lớp chuyên biệt: mỗi thành phần chỉ có một lý do duy nhất để thay đổi.</p>
+      </div>
+
+      <div style="max-width: 980px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; align-items: center;">
+        <div class="svg-wrapper" style="margin-bottom: 16px; width: 100%;">
+          <svg viewBox="0 0 960 250" xmlns="http://www.w3.org/2000/svg">
+            <!-- Layer 1: Presentation Concern -->
+            <g transform="translate(45, 35)" class="svg-interactive">
+              <rect width="250" height="160" rx="10" fill="var(--svg-node-bg)" stroke="var(--accent-emerald)" stroke-width="2"/>
+              <rect width="250" height="28" rx="8" fill="rgba(16, 185, 129, 0.2)"/>
+              <text x="125" y="19" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--accent-emerald)">PRESENTATION CONCERN</text>
+              <text x="125" y="65" text-anchor="middle" font-size="14" font-weight="700" fill="var(--text-primary)">VIEW LAYER</text>
+              <text x="125" y="90" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Giao diện, Biểu diễn dữ liệu</text>
+              <text x="125" y="112" text-anchor="middle" font-size="11" fill="var(--text-secondary)">UI Templates / CSS / DOM</text>
+              <text x="125" y="145" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent-emerald)">[Thay đổi style/theme]</text>
+            </g>
+
+            <!-- Coupling Pulse 1 -->
+            <g transform="translate(295, 115)">
+              <line x1="0" y1="0" x2="60" y2="0" stroke="var(--accent-cyan)" stroke-width="3" class="flow-dash-cyan"/>
+              <circle cx="30" cy="0" r="4" fill="var(--accent-cyan)"/>
+            </g>
+
+            <!-- Layer 2: Interaction Concern -->
+            <g transform="translate(355, 35)" class="svg-interactive">
+              <rect width="250" height="160" rx="10" fill="var(--svg-node-bg)" stroke="var(--accent-cyan)" stroke-width="2"/>
+              <rect width="250" height="28" rx="8" fill="var(--accent-cyan-glow)"/>
+              <text x="125" y="19" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--accent-cyan)">INTERACTION CONCERN</text>
+              <text x="125" y="65" text-anchor="middle" font-size="14" font-weight="700" fill="var(--text-primary)">CONTROLLER LAYER</text>
+              <text x="125" y="90" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Định tuyến, Nhận tham số</text>
+              <text x="125" y="112" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Điều phối luồng nghiệp vụ</text>
+              <text x="125" y="145" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent-cyan)">[Thay đổi URL/Routing]</text>
+            </g>
+
+            <!-- Coupling Pulse 2 -->
+            <g transform="translate(605, 115)">
+              <line x1="0" y1="0" x2="60" y2="0" stroke="var(--accent-orange)" stroke-width="3" class="flow-dash-orange"/>
+              <circle cx="30" cy="0" r="4" fill="var(--accent-orange)"/>
+            </g>
+
+            <!-- Layer 3: Data & Domain Concern -->
+            <g transform="translate(665, 35)" class="svg-interactive">
+              <rect width="250" height="160" rx="10" fill="var(--svg-node-bg)" stroke="var(--accent-orange)" stroke-width="2"/>
+              <rect width="250" height="28" rx="8" fill="var(--accent-orange-glow)"/>
+              <text x="125" y="19" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--accent-orange)">DATA & DOMAIN CONCERN</text>
+              <text x="125" y="65" text-anchor="middle" font-size="14" font-weight="700" fill="var(--text-primary)">MODEL LAYER</text>
+              <text x="125" y="90" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Trạng thái, Quy tắc kinh doanh</text>
+              <text x="125" y="112" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Entities / DAO / Persistence</text>
+              <text x="125" y="145" text-anchor="middle" font-family="var(--font-mono)" font-size="10" fill="var(--accent-orange)">[Thay đổi quy tắc thuế/giá]</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="grid-3" style="width: 100%;">
+          <div class="card accent-cyan" style="padding: 14px 18px;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 4px;">Separation of Concerns (SoC)</h4>
+            <p style="font-size: 0.85rem; color: var(--text-secondary);">Mỗi thành phần chịu trách nhiệm duy nhất một khía cạnh. Sửa giao diện không làm hỏng công thức tính tiền.</p>
+          </div>
+          <div class="card accent-orange" style="padding: 14px 18px;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-orange); margin-bottom: 4px;">Single Responsibility (SRP)</h4>
+            <p style="font-size: 0.85rem; color: var(--text-secondary);">Mỗi class chỉ có 1 lý do duy nhất để thay đổi. Triệt tiêu tác động lan truyền (Ripple Effect) khi bảo trì.</p>
+          </div>
+          <div class="card accent-purple" style="padding: 14px 18px;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-purple); margin-bottom: 4px;">Loose Coupling, High Cohesion</h4>
+            <p style="font-size: 0.85rem; color: var(--text-secondary);">Liên kết giữa các tầng là tối thiểu, mã nội bộ gắn kết cao → Tiền đề cho Unit Test độc lập hoàn toàn.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 6: MODEL - TRÁI TIM DỮ LIỆU & NGHIỆP VỤ (VISUAL 55%)
+         ========================================== -->
+    <section class="slide" id="slide-6" data-title="Thành phần 1: Model">
+      <div class="slide-header">
+        <span class="slide-category">Phần 2: Tam giác M - V - C</span>
+        <h2 class="slide-title">Thành phần 1: Model — Quản lý dữ liệu & Quy tắc nghiệp vụ</h2>
+        <p class="slide-subtitle">Trái tim của hệ thống: Độc lập tuyệt đối với tầng hiển thị, nắm giữ tính toàn vẹn và các quy tắc bất biến.</p>
+      </div>
+
+      <div class="grid-2" style="align-items: center; margin-bottom: 16px;">
+        <!-- Animated Model Architecture SVG -->
+        <div class="svg-wrapper">
+          <svg viewBox="0 0 480 245" xmlns="http://www.w3.org/2000/svg">
+            <!-- Data Flow Bus Lines -->
+            <line x1="135" y1="75" x2="195" y2="75" stroke="var(--accent-orange)" stroke-width="2" class="flow-dash-orange"/>
+            <line x1="285" y1="75" x2="345" y2="75" stroke="var(--accent-cyan)" stroke-width="2" class="flow-dash-cyan"/>
+
+            <!-- Khối 1: Database Cylinder Storage -->
+            <g transform="translate(0, 0)">
+              <ellipse cx="85" cy="40" rx="50" ry="14" fill="var(--bg-surface-elevated)" stroke="var(--accent-orange)" stroke-width="2"/>
+              <path d="M 35 40 L 35 110 A 50 14 0 0 0 135 110 L 135 40" fill="var(--bg-surface-elevated)" stroke="var(--accent-orange)" stroke-width="2"/>
+              <ellipse cx="85" cy="65" rx="50" ry="14" fill="none" stroke="var(--accent-cyan)" stroke-width="1.5" stroke-dasharray="6 4"/>
+              <ellipse cx="85" cy="88" rx="50" ry="14" fill="none" stroke="var(--accent-emerald)" stroke-width="1.5" stroke-dasharray="6 4"/>
+              <ellipse cx="85" cy="110" rx="50" ry="14" fill="none" stroke="var(--accent-orange)" stroke-width="2"/>
+
+              <!-- Nhãn chữ đặt riêng biệt bên dưới -->
+              <rect x="20" y="136" width="130" height="46" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)"/>
+              <text x="85" y="156" text-anchor="middle" font-family="var(--font-mono)" font-size="10" font-weight="700" fill="var(--accent-orange)">DATABASE STORAGE</text>
+              <text x="85" y="172" text-anchor="middle" font-size="8.5" fill="var(--text-muted)">Persistence &amp; DAO</text>
+            </g>
+
+            <!-- Khối 2: Bánh răng nghiệp vụ (Business Rules) -->
+            <g transform="translate(0, 0)">
+              <g class="gear-spin" style="transform-origin: 240px 75px;">
+                <circle cx="240" cy="75" r="38" fill="var(--bg-surface-elevated)" stroke="var(--accent-cyan)" stroke-width="2"/>
+                <path d="M 240 32 L 240 118 M 197 75 L 283 75 M 210 45 L 270 105 M 210 105 L 270 45" stroke="var(--accent-cyan)" stroke-width="5" stroke-linecap="round"/>
+                <circle cx="240" cy="75" r="27" fill="var(--bg-surface-elevated)" stroke="var(--accent-cyan)" stroke-width="2"/>
+                <circle cx="240" cy="75" r="12" fill="var(--svg-node-bg)" stroke="var(--accent-cyan)" stroke-width="2"/>
+                <circle cx="240" cy="75" r="4" fill="var(--accent-cyan)"/>
+              </g>
+
+              <!-- Nhãn chữ đặt riêng biệt bên dưới -->
+              <rect x="175" y="136" width="130" height="46" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)"/>
+              <text x="240" y="156" text-anchor="middle" font-family="var(--font-mono)" font-size="10" font-weight="700" fill="var(--accent-cyan)">BUSINESS RULES</text>
+              <text x="240" y="172" text-anchor="middle" font-size="8.5" fill="var(--text-muted)">Logic &amp; Invariants</text>
+            </g>
+
+            <!-- Khối 3: Kho thực thể (Entities / DTO State) -->
+            <g transform="translate(0, 0)">
+              <rect x="350" y="42" width="90" height="26" rx="5" fill="var(--bg-surface-elevated)" stroke="var(--border-strong)" stroke-width="1.5"/>
+              <rect x="355" y="60" width="90" height="26" rx="5" fill="var(--bg-surface-elevated)" stroke="var(--accent-emerald)" stroke-width="1.5"/>
+              <rect x="360" y="78" width="90" height="34" rx="5" fill="var(--svg-node-bg)" stroke="var(--accent-emerald)" stroke-width="2"/>
+              <text x="372" y="93" font-family="var(--font-mono)" font-size="8" fill="var(--accent-emerald)">● id: 101</text>
+              <text x="372" y="105" font-family="var(--font-mono)" font-size="8" fill="var(--text-secondary)">● state: VALID</text>
+
+              <!-- Nhãn chữ đặt riêng biệt bên dưới -->
+              <rect x="330" y="136" width="130" height="46" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)"/>
+              <text x="395" y="156" text-anchor="middle" font-family="var(--font-mono)" font-size="10" font-weight="700" fill="var(--accent-emerald)">ENTITIES / DTO</text>
+              <text x="395" y="172" text-anchor="middle" font-size="8.5" fill="var(--text-muted)">Domain Objects</text>
+            </g>
+
+            <!-- Bottom Summary Banner -->
+            <rect x="20" y="196" width="440" height="28" rx="6" fill="var(--bg-canvas)" stroke="var(--border-subtle)"/>
+            <text x="240" y="214" text-anchor="middle" font-family="var(--font-mono)" font-size="9.5" font-weight="600" fill="var(--text-secondary)">MODEL LAYER: DỮ LIỆU + QUY TẮC NGHIỆP VỤ + THỰC THỂ</text>
+          </svg>
+        </div>
+
+        <!-- Technical Description -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="card accent-orange" style="padding: 16px;">
+            <div class="card-title" style="font-size: 1rem;">
+              <span class="tag-badge orange">Trách nhiệm lõi</span>
+              State & Invariants
+            </div>
+            <p class="card-desc" style="font-size: 0.85rem;">
+              • Quản lý dữ liệu thực thể và kiểm soát tính bất biến nghiệp vụ.<br>
+              • Đóng gói công thức tính toán, trạng thái tài khoản, giỏ hàng.<br>
+              • Không chứa bất kỳ thẻ HTML hoặc mã UI nào.
+            </p>
+          </div>
+
+          <div class="card accent-cyan" style="padding: 16px;">
+            <div class="card-title" style="font-size: 1rem;">
+              <span class="tag-badge cyan">Mô hình thực tế</span>
+              Entity & DTO Pattern
+            </div>
+            <p class="card-desc" style="font-size: 0.85rem;">
+              • <strong>Java Web chuẩn:</strong> <code>JavaBeans/DTO</code> (Encapsulation) kết hợp <code>DAO</code> truy xuất qua kết nối CSDL.<br>
+              • <strong>Enterprise hiện đại:</strong> <code>Domain Entity</code> kết hợp <code>Repository Pattern</code> (Spring Data JPA / EF Core).
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 7: VIEW - GIAO DIỆN & PASSIVE VIEW (VISUAL 55%)
+         ========================================== -->
+    <section class="slide" id="slide-7" data-title="Thành phần 2: View">
+      <div class="slide-header">
+        <span class="slide-category">Phần 2: Tam giác M - V - C</span>
+        <h2 class="slide-title">Thành phần 2: View — Biểu diễn giao diện thụ động</h2>
+        <p class="slide-subtitle">View nhận dữ liệu đã được Controller chuẩn bị sẵn, kết xuất ra HTML/CSS và không tự ý gọi CSDL.</p>
+      </div>
+
+      <div class="grid-2" style="align-items: center; margin-bottom: 16px;">
+        <!-- Animated View Mockup SVG -->
+        <div class="svg-wrapper">
+          <svg viewBox="0 0 460 260" xmlns="http://www.w3.org/2000/svg">
+            <!-- Browser Mockup Window -->
+            <rect x="30" y="20" width="400" height="220" rx="10" fill="var(--svg-node-bg)" stroke="var(--accent-emerald)" stroke-width="2"/>
+            <!-- Title Bar -->
+            <rect x="30" y="20" width="400" height="28" rx="8" fill="var(--bg-surface-elevated)"/>
+            <circle cx="50" cy="34" r="4" fill="var(--accent-rose)"/>
+            <circle cx="65" cy="34" r="4" fill="var(--accent-orange)"/>
+            <circle cx="80" cy="34" r="4" fill="var(--accent-emerald)"/>
+            <rect x="110" y="27" width="200" height="14" rx="4" fill="var(--border-subtle)"/>
+            <text x="210" y="38" text-anchor="middle" font-family="var(--font-mono)" font-size="8" fill="var(--text-muted)">https://app/products</text>
+
+            <!-- Skeleton Content Animated Shimmer -->
+            <rect x="55" y="65" width="120" height="18" rx="4" fill="var(--accent-emerald)" opacity="0.8"/>
+            <text x="60" y="78" font-size="9" font-weight="700" fill="#fff">PRODUCT CATALOG</text>
+
+            <!-- Table Rows with Shimmer -->
+            <rect x="55" y="100" width="350" height="26" rx="4" class="skeleton-shimmer"/>
+            <rect x="55" y="135" width="350" height="26" rx="4" class="skeleton-shimmer" style="animation-delay: 0.3s;"/>
+            <rect x="55" y="170" width="350" height="26" rx="4" class="skeleton-shimmer" style="animation-delay: 0.6s;"/>
+
+            <!-- Data Injected Badges -->
+            <text x="70" y="117" font-family="var(--font-mono)" font-size="9" fill="var(--text-primary)">#P01 · Laptop Dell XPS</text>
+            <text x="350" y="117" font-family="var(--font-mono)" font-size="9" font-weight="700" fill="var(--accent-cyan)">$1,499</text>
+
+            <text x="70" y="152" font-family="var(--font-mono)" font-size="9" fill="var(--text-primary)">#P02 · MacBook Pro M3</text>
+            <text x="350" y="152" font-family="var(--font-mono)" font-size="9" font-weight="700" fill="var(--accent-cyan)">$1,999</text>
+
+            <text x="70" y="187" font-family="var(--font-mono)" font-size="9" fill="var(--text-primary)">#P03 · ThinkPad X1 Carbon</text>
+            <text x="350" y="187" font-family="var(--font-mono)" font-size="9" font-weight="700" fill="var(--accent-cyan)">$1,699</text>
+
+            <!-- Passive Watermark -->
+            <rect x="290" y="210" width="130" height="20" rx="4" fill="rgba(16, 185, 129, 0.2)"/>
+            <text x="355" y="223" text-anchor="middle" font-family="var(--font-mono)" font-size="8.5" font-weight="700" fill="var(--accent-emerald)">PASSIVE VIEW (JSTL/EL)</text>
+          </svg>
+        </div>
+
+        <!-- Technical Description -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="card accent-emerald" style="padding: 16px;">
+            <div class="card-title" style="font-size: 1rem;">
+              <span class="tag-badge emerald">Passive View</span>
+              Thụ động 100%
+            </div>
+            <p class="card-desc" style="font-size: 0.85rem;">
+              • View chỉ vẽ những gì Controller đưa qua Request Scope.<br>
+              • <strong>Không bao giờ</strong> chứa logic tính toán tài chính hay câu lệnh SQL.<br>
+              • Thu nhận tương tác người dùng (Click/Submit) và gửi về Controller.
+            </p>
+          </div>
+
+          <div class="card accent-cyan" style="padding: 16px;">
+            <div class="card-title" style="font-size: 1rem;">
+              <span class="tag-badge cyan">Quy chuẩn Template</span>
+              Trình diễn Declarative
+            </div>
+            <p class="card-desc" style="font-size: 0.85rem;">
+              • <strong>Java Web:</strong> Dùng JSTL (<code>&lt;c:forEach&gt;</code>) &amp; EL (<code>${item.price}</code>), loại bỏ Scriptlet (<code>&lt;% %&gt;</code>).<br>
+              • <strong>Enterprise:</strong> Razor (<code>.cshtml</code>), Thymeleaf (<code>th:each</code>), React JSX.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 8: CONTROLLER - BỘ ĐIỀU PHỐI LUỒNG (VISUAL 55%)
+         ========================================== -->
+    <section class="slide" id="slide-8" data-title="Thành phần 3: Controller">
+      <div class="slide-header">
+        <span class="slide-category">Phần 2: Tam giác M - V - C</span>
+        <h2 class="slide-title">Thành phần 3: Controller — Bộ điều phối &amp; Định tuyến luồng</h2>
+        <p class="slide-subtitle">Trung gian đón nhận HTTP Request, giải mã tham số, kích hoạt Model và điều hướng hiển thị View.</p>
+      </div>
+
+      <div class="grid-2" style="align-items: center; margin-bottom: 16px;">
+        <!-- Animated Router SVG -->
+        <div class="svg-wrapper">
+          <svg viewBox="0 0 460 260" xmlns="http://www.w3.org/2000/svg">
+            <!-- Incoming Packet -->
+            <g transform="translate(30, 110)">
+              <rect width="90" height="40" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--border-strong)"/>
+              <text x="45" y="24" text-anchor="middle" font-family="var(--font-mono)" font-size="9" font-weight="700" fill="var(--text-primary)">HTTP REQ</text>
+            </g>
+
+            <!-- Line to Router -->
+            <line x1="120" y1="130" x2="190" y2="130" stroke="var(--accent-cyan)" stroke-width="2.5" class="flow-dash-cyan"/>
+
+            <!-- Center Traffic Router Node -->
+            <g transform="translate(190, 85)" class="svg-interactive">
+              <circle cx="45" cy="45" r="40" fill="var(--svg-node-bg)" stroke="var(--accent-cyan)" stroke-width="2.5"/>
+              <circle cx="45" cy="45" r="40" fill="none" stroke="var(--accent-cyan)" stroke-width="1.5" class="beacon-pulse"/>
+              <circle cx="45" cy="45" r="10" fill="var(--accent-cyan)"/>
+              <text x="45" y="100" text-anchor="middle" font-family="var(--font-mono)" font-size="10" font-weight="700" fill="var(--accent-cyan)">CONTROLLER</text>
+              <text x="45" y="112" text-anchor="middle" font-size="8" fill="var(--text-muted)">Router / Dispatcher</text>
+            </g>
+
+            <!-- Branch to Model (Top Right) -->
+            <path d="M 270 110 C 310 110, 310 60, 350 60" fill="none" stroke="var(--accent-orange)" stroke-width="2" class="flow-dash-orange"/>
+            <g transform="translate(350, 40)">
+              <rect width="80" height="36" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-orange)" stroke-width="1.5"/>
+              <text x="40" y="22" text-anchor="middle" font-family="var(--font-mono)" font-size="9" font-weight="700" fill="var(--accent-orange)">MODEL</text>
+            </g>
+
+            <!-- Branch to View (Bottom Right) -->
+            <path d="M 270 150 C 310 150, 310 200, 350 200" fill="none" stroke="var(--accent-emerald)" stroke-width="2" class="flow-dash-emerald"/>
+            <g transform="translate(350, 180)">
+              <rect width="80" height="36" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-emerald)" stroke-width="1.5"/>
+              <text x="40" y="22" text-anchor="middle" font-family="var(--font-mono)" font-size="9" font-weight="700" fill="var(--accent-emerald)">VIEW</text>
+            </g>
+          </svg>
+        </div>
+
+        <!-- Technical Description -->
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div class="card accent-cyan" style="padding: 16px;">
+            <div class="card-title" style="font-size: 1rem;">
+              <span class="tag-badge cyan">Quy trình 4 bước</span>
+              Vòng điều phối chuẩn
+            </div>
+            <p class="card-desc" style="font-size: 0.85rem;">
+              <strong>1. Nhận Request:</strong> Đón bắt URL Mapping &amp; HTTP Method.<br>
+              <strong>2. Bóc tách Input:</strong> Đọc query params/body, validate cơ bản.<br>
+              <strong>3. Gọi Model/Service:</strong> Ủy quyền xử lý nghiệp vụ, lấy kết quả.<br>
+              <strong>4. Điều hướng:</strong> Nạp data vào Scope và Forward/Redirect tới View.
+            </p>
+          </div>
+
+          <div class="card accent-purple" style="padding: 16px;">
+            <div class="card-title" style="font-size: 1rem;">
+              <span class="tag-badge purple">Công nghệ triển khai</span>
+              Servlet &amp; Action
+            </div>
+            <p class="card-desc" style="font-size: 0.85rem;">
+              • <code>HttpServlet</code> (Java Web): <code>request.getParameter()</code> → Gọi DAO → <code>setAttribute()</code> → <code>forward()</code>.<br>
+              • <strong>Enterprise:</strong> Spring <code>@RestController</code>, ASP.NET Core <code>Controller</code>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 9: SƠ ĐỒ TƯƠNG TÁC TỔNG THỂ (HOÀN THIỆN, RỘNG RÃI)
+         ========================================== -->
+    <section class="slide" id="slide-9" data-title="Sơ đồ tương tác tổng thể">
+      <div class="slide-header">
+        <span class="slide-category">Phần 3: Luồng hoạt động & Sơ đồ</span>
+        <h2 class="slide-title">Sơ đồ tương tác 3 chiều: Client - Controller - Model - View</h2>
+        <p class="slide-subtitle">Phân tách tường minh giữa luồng vào (Input Flow) và luồng ra (Output Flow) với các xung photon chuyển động tuần hoàn.</p>
+      </div>
+
+      <div class="svg-wrapper" style="margin-bottom: 14px;">
+        <svg viewBox="0 0 1000 450" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr-cyan" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="var(--accent-cyan)"/>
+            </marker>
+            <marker id="arr-orange" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="var(--accent-orange)"/>
+            </marker>
+            <marker id="arr-emerald" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="var(--accent-emerald)"/>
+            </marker>
+            <marker id="arr-muted" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="var(--text-muted)"/>
+            </marker>
+          </defs>
+
+          <!-- Paths -->
+          <path id="flow-p1" d="M 180 185 C 210 95, 290 70, 390 70" fill="none" stroke="var(--accent-cyan)" stroke-width="2.5" class="flow-dash-cyan" marker-end="url(#arr-cyan)"/>
+          <path id="flow-p2" d="M 610 70 C 710 70, 790 95, 820 185" fill="none" stroke="var(--accent-orange)" stroke-width="2.5" class="flow-dash-orange" marker-end="url(#arr-orange)"/>
+          <path id="flow-p3" d="M 820 275 C 790 365, 710 390, 610 390" fill="none" stroke="var(--accent-emerald)" stroke-width="2.5" class="flow-dash-emerald" marker-end="url(#arr-emerald)"/>
+          <path id="flow-p4" d="M 390 390 C 290 390, 210 365, 180 275" fill="none" stroke="var(--accent-cyan)" stroke-width="2.5" class="flow-dash-cyan" marker-end="url(#arr-cyan)"/>
+          <path id="flow-p5" d="M 500 115 L 500 340" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="6 6" marker-end="url(#arr-muted)"/>
+
+          <!-- Animated Photons -->
+          <circle r="5" fill="var(--accent-cyan)"><animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#flow-p1"/></animateMotion></circle>
+          <circle r="5" fill="var(--accent-orange)"><animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#flow-p2"/></animateMotion></circle>
+          <circle r="5" fill="var(--accent-emerald)"><animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#flow-p3"/></animateMotion></circle>
+          <circle r="5" fill="var(--accent-cyan)"><animateMotion dur="2.4s" repeatCount="indefinite"><mpath href="#flow-p4"/></animateMotion></circle>
+
+          <!-- Labels -->
+          <g transform="translate(190, 65)">
+            <rect width="170" height="26" rx="6" fill="var(--bg-canvas)" stroke="var(--border-subtle)"/>
+            <text x="85" y="17" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" font-weight="700" fill="var(--accent-cyan)">(1) Gửi HTTP Request</text>
+          </g>
+
+          <g transform="translate(640, 65)">
+            <rect width="170" height="26" rx="6" fill="var(--bg-canvas)" stroke="var(--border-subtle)"/>
+            <text x="85" y="17" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" font-weight="700" fill="var(--accent-orange)">(2) Gọi Model / DAO</text>
+          </g>
+
+          <g transform="translate(640, 405)">
+            <rect width="180" height="26" rx="6" fill="var(--bg-canvas)" stroke="var(--border-subtle)"/>
+            <text x="90" y="17" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" font-weight="700" fill="var(--accent-emerald)">(3) Cung cấp DTO / State</text>
+          </g>
+
+          <g transform="translate(180, 405)">
+            <rect width="180" height="26" rx="6" fill="var(--bg-canvas)" stroke="var(--border-subtle)"/>
+            <text x="90" y="17" text-anchor="middle" font-family="var(--font-mono)" font-size="10.5" font-weight="700" fill="var(--accent-cyan)">(4) Phản hồi HTML / JSON</text>
+          </g>
+
+          <g transform="translate(510, 220)">
+            <rect width="120" height="22" rx="4" fill="var(--bg-canvas)" stroke="var(--border-subtle)"/>
+            <text x="60" y="15" text-anchor="middle" font-family="var(--font-mono)" font-size="9.5" fill="var(--text-muted)">Chọn &amp; Forward View</text>
+          </g>
+
+          <!-- Nodes -->
+          <!-- 1. Client -->
+          <g transform="translate(30, 185)" class="svg-interactive">
+            <rect width="150" height="90" rx="12" fill="var(--bg-surface-elevated)" stroke="var(--border-strong)" stroke-width="2"/>
+            <circle cx="75" cy="35" r="16" fill="none" stroke="var(--accent-cyan)" stroke-width="2.5"/>
+            <path d="M 55 68 C 55 54 95 54 95 68" fill="none" stroke="var(--accent-cyan)" stroke-width="2.5"/>
+            <text x="75" y="82" text-anchor="middle" font-family="var(--font-sans)" font-size="12" font-weight="700" fill="var(--text-primary)">CLIENT (Trình duyệt)</text>
+          </g>
+
+          <!-- 2. Controller -->
+          <g transform="translate(390, 25)" class="svg-interactive">
+            <rect width="220" height="90" rx="12" fill="var(--svg-node-bg)" stroke="var(--accent-cyan)" stroke-width="2.5"/>
+            <rect width="220" height="26" rx="10" fill="var(--accent-cyan-glow)"/>
+            <text x="110" y="18" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="700" fill="var(--accent-cyan)">CONTROLLER</text>
+            <text x="110" y="50" text-anchor="middle" font-size="13" font-weight="600" fill="var(--text-primary)">Servlet / Action Handler</text>
+            <text x="110" y="70" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Điều phối luồng &amp; Input Validation</text>
+          </g>
+
+          <!-- 3. Model -->
+          <g transform="translate(740, 185)" class="svg-interactive">
+            <rect width="220" height="90" rx="12" fill="var(--svg-node-bg)" stroke="var(--accent-orange)" stroke-width="2.5"/>
+            <rect width="220" height="26" rx="10" fill="var(--accent-orange-glow)"/>
+            <text x="110" y="18" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="700" fill="var(--accent-orange)">MODEL</text>
+            <text x="110" y="50" text-anchor="middle" font-size="13" font-weight="600" fill="var(--text-primary)">Entities / DAO / Persistence</text>
+            <text x="110" y="70" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Xử lý nghiệp vụ &amp; Truy xuất CSDL</text>
+          </g>
+
+          <!-- 4. View -->
+          <g transform="translate(390, 345)" class="svg-interactive">
+            <rect width="220" height="90" rx="12" fill="var(--svg-node-bg)" stroke="var(--accent-emerald)" stroke-width="2.5"/>
+            <rect width="220" height="26" rx="10" fill="rgba(16, 185, 129, 0.2)"/>
+            <text x="110" y="18" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="700" fill="var(--accent-emerald)">VIEW</text>
+            <text x="110" y="50" text-anchor="middle" font-size="13" font-weight="600" fill="var(--text-primary)">JSP (JSTL/EL) / Thymeleaf</text>
+            <text x="110" y="70" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Kết xuất giao diện thụ động</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="grid-3">
+        <div class="card" style="padding: 12px 16px;">
+          <p style="font-weight: 700; color: var(--accent-cyan); font-size: 0.88rem;">1. Input Flow</p>
+          <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 3px;">Client gửi Request → Controller tiếp nhận, validate và kích hoạt xử lý tại Model.</p>
+        </div>
+        <div class="card" style="padding: 12px 16px;">
+          <p style="font-weight: 700; color: var(--accent-orange); font-size: 0.88rem;">2. Processing Flow</p>
+          <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 3px;">Model truy vấn CSDL, thực thi quy tắc kinh doanh và đóng gói dữ liệu thành DTO.</p>
+        </div>
+        <div class="card" style="padding: 12px 16px;">
+          <p style="font-weight: 700; color: var(--accent-emerald); font-size: 0.88rem;">3. Output Flow</p>
+          <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 3px;">View nhận DTO, render thành HTML stream hoàn chỉnh và gửi trả về trình duyệt.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 10: VÒNG ĐỜI HTTP REQUEST-RESPONSE (SCANNER LINE)
+         ========================================== -->
+    <section class="slide" id="slide-10" data-title="Vòng đời HTTP Request-Response">
+      <div class="slide-header">
+        <span class="slide-category">Phần 3: Luồng hoạt động & Sơ đồ</span>
+        <h2 class="slide-title">Vòng đời HTTP Request-Response trên Web (Model 2)</h2>
+        <p class="slide-subtitle">Pipeline xử lý tuần tự từ lúc nhận gói tin HTTP tại Front Controller đến khi trả về giao diện hoàn tất.</p>
+      </div>
+
+      <div class="svg-wrapper" style="margin-bottom: 16px; overflow: hidden;">
+        <svg viewBox="0 0 960 250" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <marker id="arr-pipe" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="var(--accent-cyan)"/>
+            </marker>
+          </defs>
+
+          <!-- Scanning Light Beam -->
+          <rect x="80" y="70" width="12" height="100" fill="var(--accent-cyan)" opacity="0.6" filter="blur(4px)" class="scanner-beam"/>
+
+          <!-- Step 1: Browser -->
+          <g transform="translate(20, 75)">
+            <rect width="130" height="90" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--border-strong)" stroke-width="2"/>
+            <text x="65" y="42" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="700" fill="var(--text-primary)">BROWSER</text>
+            <text x="65" y="62" text-anchor="middle" font-size="10.5" fill="var(--text-secondary)">HTTP GET/POST</text>
+          </g>
+
+          <!-- Step 2: Front Controller -->
+          <g transform="translate(210, 75)">
+            <rect width="150" height="90" rx="8" fill="var(--svg-node-bg)" stroke="var(--accent-cyan)" stroke-width="2"/>
+            <text x="75" y="38" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--accent-cyan)">FRONT CONTROLLER</text>
+            <text x="75" y="58" text-anchor="middle" font-size="11" fill="var(--text-primary)">Dispatcher / Filter</text>
+            <text x="75" y="75" text-anchor="middle" font-size="9" fill="var(--text-muted)">Auth &amp; Routing</text>
+          </g>
+
+          <!-- Step 3: Action Controller -->
+          <g transform="translate(420, 75)">
+            <rect width="140" height="90" rx="8" fill="var(--svg-node-bg)" stroke="var(--border-strong)" stroke-width="2"/>
+            <text x="70" y="38" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--text-primary)">CONTROLLER</text>
+            <text x="70" y="58" text-anchor="middle" font-size="11" fill="var(--text-secondary)">Servlet / Action</text>
+            <text x="70" y="75" text-anchor="middle" font-size="9" fill="var(--text-muted)">Validate &amp; Delegate</text>
+          </g>
+
+          <!-- Step 4: Model / Service -->
+          <g transform="translate(620, 75)">
+            <rect width="140" height="90" rx="8" fill="var(--svg-node-bg)" stroke="var(--accent-orange)" stroke-width="2"/>
+            <text x="70" y="38" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--accent-orange)">DAO &amp; SERVICE</text>
+            <text x="70" y="58" text-anchor="middle" font-size="11" fill="var(--text-primary)">Business Logic</text>
+            <text x="70" y="75" text-anchor="middle" font-size="9" fill="var(--text-muted)">Database Query</text>
+          </g>
+
+          <!-- Step 5: View Resolver -->
+          <g transform="translate(800, 75)">
+            <rect width="140" height="90" rx="8" fill="var(--svg-node-bg)" stroke="var(--accent-emerald)" stroke-width="2"/>
+            <text x="70" y="38" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--accent-emerald)">VIEW RESOLVER</text>
+            <text x="70" y="58" text-anchor="middle" font-size="11" fill="var(--text-primary)">Template Engine</text>
+            <text x="70" y="75" text-anchor="middle" font-size="9" fill="var(--text-muted)">HTML Stream Render</text>
+          </g>
+
+          <!-- Forward Flow Lines -->
+          <line x1="150" y1="120" x2="205" y2="120" stroke="var(--accent-cyan)" stroke-width="2" class="flow-dash-cyan" marker-end="url(#arr-pipe)"/>
+          <line x1="360" y1="120" x2="415" y2="120" stroke="var(--accent-cyan)" stroke-width="2" class="flow-dash-cyan" marker-end="url(#arr-pipe)"/>
+          <line x1="560" y1="120" x2="615" y2="120" stroke="var(--accent-cyan)" stroke-width="2" class="flow-dash-cyan" marker-end="url(#arr-pipe)"/>
+
+          <!-- Backward Streams -->
+          <path d="M 690 165 C 690 210 870 210 870 170" fill="none" stroke="var(--accent-orange)" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arr-pipe)"/>
+          <text x="780" y="215" text-anchor="middle" font-family="var(--font-mono)" font-size="9.5" fill="var(--accent-orange)">Model Data Transfer</text>
+
+          <path d="M 870 70 C 870 20 85 20 85 70" fill="none" stroke="var(--accent-emerald)" stroke-width="2.5" class="flow-dash-emerald" marker-end="url(#arr-pipe)"/>
+          <text x="480" y="28" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--accent-emerald)">HTTP Response (HTML Stream / JSON Payload)</text>
+        </svg>
+      </div>
+
+      <div class="grid-4">
+        <div class="card" style="padding: 12px 14px;">
+          <span class="tag-badge cyan">1. Request</span>
+          <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">Browser gửi yêu cầu HTTP kèm Headers &amp; Parameters.</p>
+        </div>
+        <div class="card" style="padding: 12px 14px;">
+          <span class="tag-badge cyan">2. Dispatch</span>
+          <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">Front Controller phân tích định tuyến và bảo mật.</p>
+        </div>
+        <div class="card" style="padding: 12px 14px;">
+          <span class="tag-badge orange">3. Process</span>
+          <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">Controller gọi Service/DAO để cập nhật CSDL.</p>
+        </div>
+        <div class="card" style="padding: 12px 14px;">
+          <span class="tag-badge emerald">4. Response</span>
+          <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px;">View Resolver dựng giao diện và gửi về Client.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 11: DESKTOP VS WEB MVC
+         ========================================== -->
+    <section class="slide" id="slide-11" data-title="Desktop vs Web MVC">
+      <div class="slide-header">
+        <span class="slide-category">Phần 3: Luồng hoạt động & Sơ đồ</span>
+        <h2 class="slide-title">Desktop MVC (Active Model) vs Web MVC (Passive Model)</h2>
+        <p class="slide-subtitle">Sự chuyển dịch bản chất từ kiến trúc hướng sự kiện (Observer Pattern) sang mô hình phi trạng thái (Stateless).</p>
+      </div>
+
+      <div class="grid-2" style="margin-bottom: 16px;">
+        <!-- Left: Active Model -->
+        <div class="card accent-cyan">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 class="card-title" style="margin-bottom: 0;">Desktop MVC (Active Model)</h3>
+            <span class="tag-badge cyan">Stateful Observer</span>
+          </div>
+          <p class="card-desc" style="margin-bottom: 12px;">Áp dụng trong Desktop GUI (Java Swing, WPF, Smalltalk):</p>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--text-secondary);">
+            <li>• <strong>Observer Pattern:</strong> Model chủ động thông báo khi dữ liệu đổi (<code>notifyObservers()</code>).</li>
+            <li>• <strong>View tự cập nhật:</strong> View lắng nghe Model trực tiếp và tự vẽ lại trong bộ nhớ RAM.</li>
+            <li>• <strong>Kết nối liên tục:</strong> Trạng thái ứng dụng tồn tại xuyên suốt phiên làm việc.</li>
+          </ul>
+        </div>
+
+        <!-- Right: Passive Model -->
+        <div class="card accent-orange">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 class="card-title" style="margin-bottom: 0;">Modern Web MVC (Passive Model)</h3>
+            <span class="tag-badge orange">Stateless Request-Response</span>
+          </div>
+          <p class="card-desc" style="margin-bottom: 12px;">Áp dụng trong hệ thống Web (Servlet/JSP, Spring, ASP.NET):</p>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 8px; font-size: 0.85rem; color: var(--text-secondary);">
+            <li>• <strong>Giao thức HTTP Stateless:</strong> Kết nối đóng ngay khi máy chủ gửi xong Response.</li>
+            <li>• <strong>View hoàn toàn thụ động:</strong> Controller bắt buộc phải lấy Model và nhồi vào View.</li>
+            <li>• <strong>Vòng đời ngắn:</strong> Controller và ViewModel được tạo và giải phóng theo từng Request.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="background: var(--bg-surface-elevated); padding: 14px 20px;">
+        <span style="font-weight: 700; color: var(--accent-cyan); font-size: 0.92rem;">Đúc kết kiến trúc quan trọng:</span>
+        <span style="color: var(--text-secondary); font-size: 0.88rem; margin-left: 8px;">
+          Trên môi trường Web, <strong>Controller đóng vai trò trung gian tuyệt đối</strong>, điều phối dữ liệu từ Model vào View Resolver, thay vì để View tự động lắng nghe Model như thời Desktop.
+        </span>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 12: SO SÁNH MVC VS MVP VS MVVM (3 VECTOR DIAGRAMS)
+         ========================================== -->
+    <section class="slide" id="slide-12" data-title="So sánh: MVC vs MVP vs MVVM">
+      <div class="slide-header">
+        <span class="slide-category">Phần 4: So sánh kiến trúc & Triển khai</span>
+        <h2 class="slide-title">So sánh kiến trúc: MVC vs MVP vs MVVM</h2>
+        <p class="slide-subtitle">Sự tiến hóa của các biến thể phân tầng giao diện người dùng (UI Architectural Patterns).</p>
+      </div>
+
+      <div class="svg-wrapper" style="margin-bottom: 16px;">
+        <svg viewBox="0 0 960 220" xmlns="http://www.w3.org/2000/svg">
+          <!-- 1. MVC Diagram -->
+          <g transform="translate(20, 10)">
+            <rect width="280" height="200" rx="8" fill="var(--svg-node-bg)" stroke="var(--border-subtle)"/>
+            <text x="140" y="24" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--accent-cyan)">MVC (MODEL-VIEW-CONTROLLER)</text>
+
+            <rect x="90" y="45" width="100" height="32" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-cyan)"/>
+            <text x="140" y="65" text-anchor="middle" font-size="10" font-weight="700">Controller</text>
+
+            <rect x="25" y="130" width="90" height="32" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-emerald)"/>
+            <text x="70" y="150" text-anchor="middle" font-size="10" font-weight="700">View</text>
+
+            <rect x="165" y="130" width="90" height="32" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-orange)"/>
+            <text x="210" y="150" text-anchor="middle" font-size="10" font-weight="700">Model</text>
+
+            <line x1="110" y1="77" x2="70" y2="130" stroke="var(--accent-cyan)" stroke-width="1.5"/>
+            <line x1="170" y1="77" x2="210" y2="130" stroke="var(--accent-orange)" stroke-width="1.5"/>
+            <line x1="165" y1="146" x2="115" y2="146" stroke="var(--accent-emerald)" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <text x="140" y="188" text-anchor="middle" font-size="9" fill="var(--text-muted)">Phù hợp Web Applications</text>
+          </g>
+
+          <!-- 2. MVP Diagram -->
+          <g transform="translate(340, 10)">
+            <rect width="280" height="200" rx="8" fill="var(--svg-node-bg)" stroke="var(--border-subtle)"/>
+            <text x="140" y="24" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--accent-orange)">MVP (MODEL-VIEW-PRESENTER)</text>
+
+            <rect x="90" y="85" width="100" height="32" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-orange)" stroke-width="2"/>
+            <text x="140" y="105" text-anchor="middle" font-size="10" font-weight="700">Presenter</text>
+
+            <rect x="15" y="85" width="60" height="32" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-emerald)"/>
+            <text x="45" y="105" text-anchor="middle" font-size="10" font-weight="700">View</text>
+
+            <rect x="205" y="85" width="60" height="32" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-cyan)"/>
+            <text x="235" y="105" text-anchor="middle" font-size="10" font-weight="700">Model</text>
+
+            <line x1="75" y1="95" x2="90" y2="95" stroke="var(--accent-orange)" stroke-width="2"/>
+            <line x1="75" y1="107" x2="90" y2="107" stroke="var(--accent-orange)" stroke-width="2"/>
+            <line x1="190" y1="95" x2="205" y2="95" stroke="var(--accent-cyan)" stroke-width="2"/>
+            <line x1="190" y1="107" x2="205" y2="107" stroke="var(--accent-cyan)" stroke-width="2"/>
+
+            <text x="140" y="150" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--accent-orange)">View ⟂ Model (Độc lập 100%)</text>
+            <text x="140" y="188" text-anchor="middle" font-size="9" fill="var(--text-muted)">Phù hợp Desktop / Testable UI</text>
+          </g>
+
+          <!-- 3. MVVM Diagram -->
+          <g transform="translate(660, 10)">
+            <rect width="280" height="200" rx="8" fill="var(--svg-node-bg)" stroke="var(--border-subtle)"/>
+            <text x="140" y="24" text-anchor="middle" font-family="var(--font-mono)" font-size="11" font-weight="700" fill="var(--accent-purple)">MVVM (DATA BINDING)</text>
+
+            <rect x="15" y="85" width="65" height="32" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-emerald)"/>
+            <text x="47" y="105" text-anchor="middle" font-size="10" font-weight="700">View</text>
+
+            <rect x="100" y="85" width="80" height="32" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-purple)" stroke-width="2"/>
+            <text x="140" y="105" text-anchor="middle" font-size="10" font-weight="700">ViewModel</text>
+
+            <rect x="205" y="85" width="60" height="32" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--accent-cyan)"/>
+            <text x="235" y="105" text-anchor="middle" font-size="10" font-weight="700">Model</text>
+
+            <!-- Wave Binding -->
+            <path d="M 80 101 L 100 101" stroke="var(--accent-purple)" stroke-width="2" class="sync-wave"/>
+            <line x1="180" y1="101" x2="205" y2="101" stroke="var(--accent-cyan)" stroke-width="1.5"/>
+
+            <text x="140" y="150" text-anchor="middle" font-family="var(--font-mono)" font-size="9" fill="var(--accent-purple)">Two-way Data Binding</text>
+            <text x="140" y="188" text-anchor="middle" font-size="9" fill="var(--text-muted)">Phù hợp SPA (React/Vue/WPF)</text>
+          </g>
+        </svg>
+      </div>
+
+      <div class="table-container">
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th>Tiêu chí</th>
+              <th>MVC</th>
+              <th>MVP</th>
+              <th>MVVM</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Cơ chế trung gian</strong></td>
+              <td>Controller (Routing, điều hướng)</td>
+              <td>Presenter (Thao tác qua View Interface)</td>
+              <td>ViewModel (Data Binding hai chiều)</td>
+            </tr>
+            <tr>
+              <td><strong>Ràng buộc View - Model</strong></td>
+              <td>View đọc Model hiển thị</td>
+              <td>View và Model <strong>không biết nhau</strong></td>
+              <td>View liên kết tự động qua ViewModel</td>
+            </tr>
+            <tr>
+              <td><strong>Testability</strong></td>
+              <td>Khá tốt (Test riêng biệt)</td>
+              <td><strong>Rất cao</strong> (Mock View Interface)</td>
+              <td><strong>Rất cao</strong> (ViewModel độc lập UI)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 13: TRIỂN KHAI THỰC TẾ ENTERPRISE (CLEAN LAYERED STACK)
+         ========================================== -->
+    <section class="slide" id="slide-13" data-title="Triển khai thực tế Enterprise">
+      <div class="slide-header">
+        <span class="slide-category">Phần 4: So sánh kiến trúc & Triển khai</span>
+        <h2 class="slide-title">Triển khai MVC trong Enterprise Frameworks</h2>
+        <p class="slide-subtitle">Bố cục 3 tầng ngang chuẩn mực (3-Tier Layered Stack): Đơn hướng, tường minh và tách biệt trách nhiệm.</p>
+      </div>
+
+      <!-- 3-Tier Layered Stack -->
+      <div style="max-width: 920px; width: 100%; margin: 0 auto; display: flex; flex-direction: column;">
+        <!-- Tầng 1: Presentation Layer -->
+        <div class="card accent-cyan" style="padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-radius: var(--radius-md);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="background: var(--accent-cyan-glow); color: var(--accent-cyan); width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 800; font-size: 0.95rem;">L1</div>
+            <div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                Presentation Layer (Giao diện &amp; Điều phối)
+                <span class="tag-badge cyan">MVC / REST</span>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">
+                Nhận HTTP Request, trích xuất tham số, xác thực dữ liệu (Validation), điều hướng và trả về DTO/View.
+              </p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px; flex-shrink: 0;">
+            <code style="font-family: var(--font-mono); font-size: 0.78rem; background: var(--bg-surface-elevated); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--accent-cyan);">@RestController</code>
+            <code style="font-family: var(--font-mono); font-size: 0.78rem; background: var(--bg-surface-elevated); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--text-secondary);">ControllerBase</code>
+          </div>
+        </div>
+
+        <!-- Single Direction Connector 1 -->
+        <div style="display: flex; justify-content: center; align-items: center; height: 26px; gap: 8px;">
+          <div style="width: 2px; height: 14px; background: var(--accent-cyan);"></div>
+          <span style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--accent-cyan); font-weight: 600;">↓ Calls Business Services (DTO In/Out)</span>
+          <div style="width: 2px; height: 14px; background: var(--accent-cyan);"></div>
+        </div>
+
+        <!-- Tầng 2: Business Service Layer -->
+        <div class="card accent-orange" style="padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-radius: var(--radius-md);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="background: var(--accent-orange-glow); color: var(--accent-orange); width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 800; font-size: 0.95rem;">L2</div>
+            <div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                Business Service Layer (Quy tắc nghiệp vụ lõi)
+                <span class="tag-badge orange">Domain Logic</span>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">
+                Xử lý nghiệp vụ, tính toán chiết khấu/thuế, quản lý giao dịch an toàn (ACID) và kiểm soát toàn vẹn dữ liệu.
+              </p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px; flex-shrink: 0;">
+            <code style="font-family: var(--font-mono); font-size: 0.78rem; background: var(--bg-surface-elevated); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--accent-orange);">@Service</code>
+            <code style="font-family: var(--font-mono); font-size: 0.78rem; background: var(--bg-surface-elevated); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--text-secondary);">@Transactional</code>
+          </div>
+        </div>
+
+        <!-- Single Direction Connector 2 -->
+        <div style="display: flex; justify-content: center; align-items: center; height: 26px; gap: 8px;">
+          <div style="width: 2px; height: 14px; background: var(--accent-orange);"></div>
+          <span style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--accent-orange); font-weight: 600;">↓ Queries &amp; Persists Domain Entities</span>
+          <div style="width: 2px; height: 14px; background: var(--accent-orange);"></div>
+        </div>
+
+        <!-- Tầng 3: Data Access Layer -->
+        <div class="card accent-emerald" style="padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-radius: var(--radius-md);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-weight: 800; font-size: 0.95rem;">L3</div>
+            <div>
+              <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
+                Data Access Layer (Truy xuất dữ liệu &amp; CSDL)
+                <span class="tag-badge emerald">Persistence</span>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px;">
+                Giao tiếp cơ sở dữ liệu qua ORM/Repository, sinh câu truy vấn SQL tối ưu và ánh xạ dữ liệu thành Entity.
+              </p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 6px; flex-shrink: 0;">
+            <code style="font-family: var(--font-mono); font-size: 0.78rem; background: var(--bg-surface-elevated); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--accent-emerald);">@Repository</code>
+            <code style="font-family: var(--font-mono); font-size: 0.78rem; background: var(--bg-surface-elevated); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border-strong); color: var(--text-secondary);">DbContext / JPA</code>
+          </div>
+        </div>
+
+        <!-- Ecosystem Summary -->
+        <div class="grid-2" style="margin-top: 16px;">
+          <div class="card" style="padding: 12px 18px; background: var(--bg-surface-elevated);">
+            <span style="font-weight: 700; color: var(--accent-cyan); font-size: 0.88rem;">Java · Spring Boot:</span>
+            <span style="font-size: 0.82rem; color: var(--text-secondary); margin-left: 6px;"><code>@Controller</code> → <code>@Service</code> → <code>JpaRepository</code> → MySQL/PostgreSQL</span>
+          </div>
+          <div class="card" style="padding: 12px 18px; background: var(--bg-surface-elevated);">
+            <span style="font-weight: 700; color: var(--accent-orange); font-size: 0.88rem;">.NET · ASP.NET Core:</span>
+            <span style="font-size: 0.82rem; color: var(--text-secondary); margin-left: 6px;"><code>ControllerBase</code> → <code>BusinessService</code> → <code>DbContext (EF Core)</code> → SQL Server</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 14: ANTI-PATTERNS & FAT CONTROLLER (CÂN BẬP BÊNH)
+         ========================================== -->
+    <section class="slide" id="slide-14" data-title="Anti-Patterns cần tránh">
+      <div class="slide-header">
+        <span class="slide-category">Phần 5: Anti-Patterns & Best Practices</span>
+        <h2 class="slide-title">Anti-Patterns: Cân bằng tải kiến trúc Controller</h2>
+        <p class="slide-subtitle">Cảnh báo lỗi thiết kế vi phạm nguyên tắc SOLID và làm suy giảm nghiêm trọng chất lượng phần mềm.</p>
+      </div>
+
+      <div class="svg-wrapper" style="margin-bottom: 16px;">
+        <svg viewBox="0 0 880 230" xmlns="http://www.w3.org/2000/svg">
+          <!-- Fulcrum Base (Điểm tựa) -->
+          <polygon points="440,160 415,210 465,210" fill="var(--bg-surface-elevated)" stroke="var(--border-strong)" stroke-width="2"/>
+          <circle cx="440" cy="160" r="6" fill="var(--accent-orange)"/>
+
+          <!-- Tilted Beam (Thanh cân nghiêng) -->
+          <g class="scale-beam-tilted" style="transform-origin: 440px 160px;">
+            <rect x="140" y="156" width="600" height="8" rx="4" fill="var(--border-strong)"/>
+
+            <!-- Heavy Left Side (Fat Controller) -->
+            <g transform="translate(160, 45)">
+              <rect width="180" height="110" rx="10" fill="rgba(244, 63, 94, 0.15)" stroke="var(--accent-rose)" stroke-width="2.5"/>
+              <text x="90" y="24" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="700" fill="var(--accent-rose)">FAT CONTROLLER</text>
+              <text x="90" y="48" text-anchor="middle" font-size="11" fill="var(--text-primary)">500+ Dòng mã</text>
+              <text x="90" y="68" text-anchor="middle" font-size="10" fill="var(--text-secondary)">Chứa trực tiếp SQL &amp; Logic</text>
+              <text x="90" y="88" text-anchor="middle" font-size="10" fill="var(--text-secondary)">Vi phạm SRP nghiêm trọng</text>
+              <circle cx="160" cy="20" r="12" fill="var(--accent-rose)"/>
+              <text x="160" y="24" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff">⚠️</text>
+            </g>
+
+            <!-- Light Right Side (Thin Controller + Service) -->
+            <g transform="translate(540, 85)">
+              <rect width="180" height="70" rx="10" fill="rgba(16, 185, 129, 0.15)" stroke="var(--accent-emerald)" stroke-width="2"/>
+              <text x="90" y="24" text-anchor="middle" font-family="var(--font-mono)" font-size="12" font-weight="700" fill="var(--accent-emerald)">SKINNY CONTROLLER</text>
+              <text x="90" y="45" text-anchor="middle" font-size="11" fill="var(--text-primary)">Ủy quyền cho Service</text>
+              <text x="90" y="60" text-anchor="middle" font-size="9" fill="var(--accent-emerald)">Clean Code · Chuẩn SOLID</text>
+            </g>
+          </g>
+        </svg>
+      </div>
+
+      <div class="grid-3">
+        <div class="card accent-rose" style="padding: 14px;">
+          <h4 style="font-size: 0.92rem; color: var(--accent-rose); font-weight: 700; margin-bottom: 4px;">Fat Controller (God Object)</h4>
+          <p style="font-size: 0.82rem; color: var(--text-secondary);">Gia tăng Cyclomatic Complexity, phát sinh Tight Coupling và triệt tiêu khả năng Unit Testing.</p>
+        </div>
+        <div class="card accent-rose" style="padding: 14px;">
+          <h4 style="font-size: 0.92rem; color: var(--accent-rose); font-weight: 700; margin-bottom: 4px;">Anemic Domain Model</h4>
+          <p style="font-size: 0.82rem; color: var(--text-secondary);">Model chỉ chứa getter/setter không có hành vi nghiệp vụ, phân tán logic ra ngoài tầng ứng dụng.</p>
+        </div>
+        <div class="card accent-rose" style="padding: 14px;">
+          <h4 style="font-size: 0.92rem; color: var(--accent-rose); font-weight: 700; margin-bottom: 4px;">View DB Leakage</h4>
+          <p style="font-size: 0.82rem; color: var(--text-secondary);">View gọi truy vấn trực tiếp gây lỗi mất kết nối (LazyInitialization) và sụt giảm hiệu năng nặng nề.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 15: BEST PRACTICES (4 VISUAL CARDS)
+         ========================================== -->
+    <section class="slide" id="slide-15" data-title="Best Practices">
+      <div class="slide-header">
+        <span class="slide-category">Phần 5: Anti-Patterns & Best Practices</span>
+        <h2 class="slide-title">Best Practices: Tối ưu hóa kiến trúc MVC</h2>
+        <p class="slide-subtitle">Các nguyên tắc vàng giúp hệ thống dễ bảo trì, mở rộng an toàn và đạt chuẩn công nghiệp.</p>
+      </div>
+
+      <div class="grid-2" style="margin-bottom: 16px;">
+        <div class="card accent-cyan">
+          <span class="tag-badge cyan" style="margin-bottom: 8px;">Quy tắc 01</span>
+          <h3 class="card-title">Skinny Controller, Fat Model</h3>
+          <p class="card-desc" style="font-size: 0.85rem;">
+            Controller siêu mỏng: chỉ nhận request → ủy quyền cho Service → trả kết quả. Giữ các quy tắc bất biến trong Rich Domain Model.
+          </p>
+        </div>
+
+        <div class="card accent-orange">
+          <span class="tag-badge orange" style="margin-bottom: 8px;">Quy tắc 02</span>
+          <h3 class="card-title">Sử dụng DTOs &amp; ViewModels</h3>
+          <p class="card-desc" style="font-size: 0.85rem;">
+            Không đưa Domain Entity trực tiếp lên View. Sử dụng DTO để che giấu trường nhạy cảm và chống tấn công Over-Posting.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card accent-purple">
+          <span class="tag-badge purple" style="margin-bottom: 8px;">Quy tắc 03</span>
+          <h3 class="card-title">Dependency Injection (DI)</h3>
+          <p class="card-desc" style="font-size: 0.85rem;">
+            Tiêm phụ thuộc qua Constructor Injection. Không dùng từ khóa <code>new</code> trong Controller để đảm bảo khả năng Mock Test.
+          </p>
+        </div>
+
+        <div class="card accent-emerald">
+          <span class="tag-badge emerald" style="margin-bottom: 8px;">Quy tắc 04</span>
+          <h3 class="card-title">Centralized Exception Handling</h3>
+          <p class="card-desc" style="font-size: 0.85rem;">
+            Không viết <code>try-catch</code> tràn lan trong Controller. Sử dụng bộ bắt lỗi tập trung (Global Exception Middleware / Advice).
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 16: ĐÁNH GIÁ CHẤT LƯỢNG (ISO/IEC 25010)
+         ========================================== -->
+    <section class="slide" id="slide-16" data-title="Đánh giá kiến trúc">
+      <div class="slide-header">
+        <span class="slide-category">Phần 5: Đánh giá & Kết luận</span>
+        <h2 class="slide-title">Đánh giá kiến trúc: Ưu điểm &amp; Đánh đổi (ISO/IEC 25010)</h2>
+      </div>
+
+      <div class="grid-2">
+        <div class="card accent-cyan">
+          <div class="card-title" style="color: var(--accent-emerald);">
+            <span class="tag-badge emerald">Ưu điểm</span>
+            Lợi ích kỹ thuật
+          </div>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem; color: var(--text-secondary); margin-top: 10px;">
+            <li>• <strong>Testability cao:</strong> Kiểm thử độc lập Model &amp; Controller không cần dựng môi trường UI.</li>
+            <li>• <strong>Maintainability:</strong> Đổi công nghệ giao diện mà không ảnh hưởng logic lõi.</li>
+            <li>• <strong>Team Parallelism:</strong> Frontend và Backend lập trình song song qua hợp đồng API/DTO.</li>
+          </ul>
+        </div>
+
+        <div class="card accent-orange">
+          <div class="card-title" style="color: var(--accent-rose);">
+            <span class="tag-badge rose">Đánh đổi</span>
+            Hạn chế &amp; Chi phí
+          </div>
+          <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 0.88rem; color: var(--text-secondary); margin-top: 10px;">
+            <li>• <strong>Initial Overhead:</strong> Với CRUD nhỏ, kiến trúc tạo ra nhiều file và lớp trung gian thừa.</li>
+            <li>• <strong>Nguy cơ Fat Controller:</strong> Cần kỷ luật thiết kế để tránh nhồi nhét logic vào Controller.</li>
+            <li>• <strong>Kém linh hoạt với Real-time:</strong> Cần nâng cấp lên MVVM hoặc Component-based khi làm SPA lớn.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 17: TỔNG KẾT & TAKEAWAYS
+         ========================================== -->
+    <section class="slide" id="slide-17" data-title="Tổng kết & Thông điệp">
+      <div class="slide-header">
+        <span class="slide-category">Phần 5: Đánh giá & Kết luận</span>
+        <h2 class="slide-title">Tổng kết &amp; Thông điệp cốt lõi</h2>
+      </div>
+
+      <div class="grid-4" style="margin-bottom: 24px;">
+        <div class="card" style="text-align: center; padding: 22px 14px;">
+          <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: 800; color: var(--accent-cyan); margin-bottom: 6px;">01</div>
+          <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 6px;">SoC là Chân lý</h4>
+          <p style="font-size: 0.82rem; color: var(--text-secondary);">Tách biệt UI, Business Logic và Điều hướng là nền móng để phần mềm trường tồn.</p>
+        </div>
+
+        <div class="card" style="text-align: center; padding: 22px 14px;">
+          <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: 800; color: var(--accent-orange); margin-bottom: 6px;">02</div>
+          <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 6px;">Model là Trái tim</h4>
+          <p style="font-size: 0.82rem; color: var(--text-secondary);">Đầu tư vào Rich Domain Model. View và Controller chỉ là lớp vỏ bọc bên ngoài.</p>
+        </div>
+
+        <div class="card" style="text-align: center; padding: 22px 14px;">
+          <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: 800; color: var(--accent-emerald); margin-bottom: 6px;">03</div>
+          <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 6px;">Giữ Controller Mỏng</h4>
+          <p style="font-size: 0.82rem; color: var(--text-secondary);">Ủy quyền xử lý cho Service Layer. Controller chỉ làm nhiệm vụ tiếp nhận và điều hướng.</p>
+        </div>
+
+        <div class="card" style="text-align: center; padding: 22px 14px;">
+          <div style="font-family: var(--font-mono); font-size: 1.8rem; font-weight: 800; color: var(--accent-purple); margin-bottom: 6px;">04</div>
+          <h4 style="font-size: 1rem; font-weight: 700; margin-bottom: 6px;">Linh hoạt Biến thể</h4>
+          <p style="font-size: 0.82rem; color: var(--text-secondary);">Hiểu rõ khi nào dùng Web MVC, khi nào chuyển sang MVP hoặc MVVM cho phù hợp.</p>
+        </div>
+      </div>
+
+      <div class="card" style="background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(249, 115, 22, 0.1) 100%); border-color: var(--accent-cyan); padding: 18px 24px; text-align: center;">
+        <p style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); font-style: italic;">
+          "Kiến trúc tốt không phải là loại bỏ mọi sự phức tạp, mà là đặt sự phức tạp vào đúng vị trí của nó."
+        </p>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         SLIDE 18: KẾT BÀI (ĐÚNG 2 DÒNG Ở VỊ TRÍ TRUNG TÂM)
+         ========================================== -->
+    <section class="slide" id="slide-18" data-title="Kết bài">
+      <div class="hero-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 55vh;">
+        <p style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 24px;">
+          Kết thúc bài báo cáo
+        </p>
+        <h1 class="hero-title" style="font-size: 4rem; line-height: 1.2; margin: 0;">
+          Cảm ơn Thầy &amp; Các bạn!
+        </h1>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation Bar -->
+  <footer class="bottom-bar">
+    <div class="slide-counter">
+      <span>SLIDE</span>
+      <span class="current" id="current-slide-num">01</span>
+      <span>/</span>
+      <span id="total-slide-num">18</span>
+    </div>
+
+    <div class="shortcut-hints">
+      <span>Phím tắt:</span>
+      <span><span class="key-badge">←</span> <span class="key-badge">→</span> Chuyển slide</span>
+      <span><span class="key-badge">Space</span> Tiến</span>
+      <span><span class="key-badge">G</span> Grid</span>
+      <span><span class="key-badge">T</span> Theme</span>
+      <span><span class="key-badge">F</span> Fullscreen</span>
+    </div>
+
+    <div class="nav-controls">
+      <button class="nav-btn" id="btn-prev" title="Slide trước (Mũi tên trái)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        <span>Trước</span>
+      </button>
+      <button class="nav-btn" id="btn-next" title="Slide tiếp (Mũi tên phải hoặc Space)">
+        <span>Tiếp</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- Grid Overview Modal -->
+  <div id="grid-overlay">
+    <div class="grid-header">
+      <h2>Tổng quan toàn bộ Slide (18 Slides)</h2>
+      <button class="grid-close-btn" id="btn-close-grid" title="Đóng (Esc)">×</button>
+    </div>
+    <div class="grid-thumbnails" id="grid-thumbnails-container"></div>
+  </div>
+
+  <!-- Keyboard Shortcuts Modal -->
+  <div id="help-modal">
+    <div class="help-card">
+      <h3>
+        <span>Phím tắt điều khiển</span>
+        <button class="grid-close-btn" id="btn-close-help" title="Đóng (Esc)" style="font-size: 1.4rem;">×</button>
+      </h3>
+      <div class="help-list">
+        <div class="help-row">
+          <span>Chuyển sang slide tiếp theo</span>
+          <div><span class="key-badge">→</span> <span class="key-badge">Space</span> <span class="key-badge">PageDown</span></div>
+        </div>
+        <div class="help-row">
+          <span>Quay lại slide trước đó</span>
+          <div><span class="key-badge">←</span> <span class="key-badge">PageUp</span></div>
+        </div>
+        <div class="help-row">
+          <span>Về slide đầu tiên / cuối cùng</span>
+          <div><span class="key-badge">Home</span> <span class="key-badge">End</span></div>
+        </div>
+        <div class="help-row">
+          <span>Mở / Đóng lưới tổng quan</span>
+          <div><span class="key-badge">G</span></div>
+        </div>
+        <div class="help-row">
+          <span>Bật / Tắt chế độ toàn màn hình</span>
+          <div><span class="key-badge">F</span></div>
+        </div>
+        <div class="help-row">
+          <span>Chuyển đổi giao diện Sáng / Tối</span>
+          <div><span class="key-badge">T</span></div>
+        </div>
+        <div class="help-row">
+          <span>Đóng cửa sổ phụ</span>
+          <div><span class="key-badge">Esc</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       SLIDE ENGINE SCRIPT
+       ========================================================================== -->
+  <script>
+    (function() {
+      'use strict';
+
+      // State
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const totalSlides = slides.length;
+      let currentIndex = 0;
+
+      // DOM Elements
+      const progressBar = document.getElementById('progress-bar');
+      const currentSlideNum = document.getElementById('current-slide-num');
+      const totalSlideNum = document.getElementById('total-slide-num');
+      const btnPrev = document.getElementById('btn-prev');
+      const btnNext = document.getElementById('btn-next');
+      const btnTheme = document.getElementById('btn-theme');
+      const btnGrid = document.getElementById('btn-grid');
+      const btnFullscreen = document.getElementById('btn-fullscreen');
+      const btnHelp = document.getElementById('btn-help');
+      const gridOverlay = document.getElementById('grid-overlay');
+      const btnCloseGrid = document.getElementById('btn-close-grid');
+      const gridContainer = document.getElementById('grid-thumbnails-container');
+      const helpModal = document.getElementById('help-modal');
+      const btnCloseHelp = document.getElementById('btn-close-help');
+
+      // Initialize slide count display
+      totalSlideNum.textContent = String(totalSlides).padStart(2, '0');
+
+      // 1. Navigation core
+      function goToSlide(index, updateHash = true) {
+        if (index < 0 || index >= totalSlides) return;
+
+        slides[currentIndex].classList.remove('active');
+        currentIndex = index;
+        slides[currentIndex].classList.add('active');
+
+        // Update progress bar
+        const progressPct = ((currentIndex + 1) / totalSlides) * 100;
+        progressBar.style.width = `${progressPct}%`;
+
+        // Update indicator
+        currentSlideNum.textContent = String(currentIndex + 1).padStart(2, '0');
+
+        // Update button states
+        btnPrev.disabled = currentIndex === 0;
+        btnNext.disabled = currentIndex === totalSlides - 1;
+
+        // Sync URL Hash
+        if (updateHash) {
+          window.location.hash = `#${currentIndex + 1}`;
+        }
+
+        // Highlight active thumbnail in grid
+        updateGridHighlight();
+
+        // Scroll deck to top in case of overflow
+        document.getElementById('deck').scrollTop = 0;
+      }
+
+      function nextSlide() {
+        if (currentIndex < totalSlides - 1) goToSlide(currentIndex + 1);
+      }
+
+      function prevSlide() {
+        if (currentIndex > 0) goToSlide(currentIndex - 1);
+      }
+
+      // 2. Hash Routing
+      function parseHash() {
+        const hash = window.location.hash.replace('#', '');
+        const slideNum = parseInt(hash, 10);
+        if (!isNaN(slideNum) && slideNum >= 1 && slideNum <= totalSlides) {
+          goToSlide(slideNum - 1, false);
+        } else {
+          goToSlide(0, false);
+        }
+      }
+
+      window.addEventListener('hashchange', parseHash);
+
+      // 3. Grid Overview
+      function buildGridThumbnails() {
+        gridContainer.innerHTML = '';
+        slides.forEach((slide, idx) => {
+          const thumb = document.createElement('div');
+          thumb.className = `grid-thumb ${idx === currentIndex ? 'active' : ''}`;
+          thumb.dataset.index = idx;
+
+          const num = document.createElement('div');
+          num.className = 'thumb-num';
+          num.textContent = `SLIDE ${String(idx + 1).padStart(2, '0')}`;
+
+          const title = document.createElement('div');
+          title.className = 'thumb-title';
+          title.textContent = slide.dataset.title || `Slide ${idx + 1}`;
+
+          thumb.appendChild(num);
+          thumb.appendChild(title);
+
+          thumb.addEventListener('click', () => {
+            goToSlide(idx);
+            closeGrid();
+          });
+
+          gridContainer.appendChild(thumb);
+        });
+      }
+
+      function updateGridHighlight() {
+        const thumbs = gridContainer.querySelectorAll('.grid-thumb');
+        thumbs.forEach((t, i) => {
+          t.classList.toggle('active', i === currentIndex);
+        });
+      }
+
+      function toggleGrid() {
+        const isActive = gridOverlay.classList.contains('active');
+        if (isActive) {
+          closeGrid();
+        } else {
+          openGrid();
+        }
+      }
+
+      function openGrid() {
+        gridOverlay.classList.add('active');
+        updateGridHighlight();
+      }
+
+      function closeGrid() {
+        gridOverlay.classList.remove('active');
+      }
+
+      // 4. Theme Toggle (Dark / Light)
+      function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', nextTheme);
+        localStorage.setItem('swd392_slide_theme', nextTheme);
+      }
+
+      // Restore saved theme
+      const savedTheme = localStorage.getItem('swd392_slide_theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+
+      // 5. Fullscreen Toggle
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          }
+        }
+      }
+
+      // 6. Help Modal
+      function toggleHelp() {
+        helpModal.classList.toggle('active');
+      }
+
+      function closeHelp() {
+        helpModal.classList.remove('active');
+      }
+
+      // 7. Keyboard Shortcuts
+      window.addEventListener('keydown', (e) => {
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+        if (e.key === 'Escape') {
+          if (gridOverlay.classList.contains('active')) closeGrid();
+          if (helpModal.classList.contains('active')) closeHelp();
+          return;
+        }
+
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+          e.preventDefault();
+          nextSlide();
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+          e.preventDefault();
+          prevSlide();
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          goToSlide(0);
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          goToSlide(totalSlides - 1);
+        } else if (e.key === 'g' || e.key === 'G') {
+          e.preventDefault();
+          toggleGrid();
+        } else if (e.key === 't' || e.key === 'T') {
+          e.preventDefault();
+          toggleTheme();
+        } else if (e.key === 'f' || e.key === 'F') {
+          e.preventDefault();
+          toggleFullscreen();
+        } else if (e.key === '?' || e.key === 'h' || e.key === 'H') {
+          e.preventDefault();
+          toggleHelp();
+        }
+      });
+
+      // 8. Mouse Wheel Navigation (Debounced)
+      let wheelLocked = false;
+      window.addEventListener('wheel', (e) => {
+        if (gridOverlay.classList.contains('active')) return;
+        if (wheelLocked) return;
+
+        if (Math.abs(e.deltaY) > 40) {
+          wheelLocked = true;
+          if (e.deltaY > 0) {
+            nextSlide();
+          } else {
+            prevSlide();
+          }
+          setTimeout(() => { wheelLocked = false; }, 350);
+        }
+      }, { passive: true });
+
+      // 9. Mobile Touch Swipe Navigation
+      let touchStartX = 0;
+      let touchStartY = 0;
+      window.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+      }, { passive: true });
+
+      window.addEventListener('touchend', (e) => {
+        if (gridOverlay.classList.contains('active')) return;
+        const touchEndX = e.changedTouches[0].screenX;
+        const touchEndY = e.changedTouches[0].screenY;
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+
+        if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+          if (diffX < 0) {
+            nextSlide();
+          } else {
+            prevSlide();
+          }
+        }
+      }, { passive: true });
+
+      // 10. Button Event Listeners
+      btnNext.addEventListener('click', nextSlide);
+      btnPrev.addEventListener('click', prevSlide);
+      btnTheme.addEventListener('click', toggleTheme);
+      btnGrid.addEventListener('click', toggleGrid);
+      btnCloseGrid.addEventListener('click', closeGrid);
+      btnFullscreen.addEventListener('click', toggleFullscreen);
+      btnHelp.addEventListener('click', toggleHelp);
+      btnCloseHelp.addEventListener('click', closeHelp);
+      helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) closeHelp();
+      });
+
+      // Initial Setup
+      buildGridThumbnails();
+      parseHash();
+
+    })();
+  </script>
+</body>
+</html>
